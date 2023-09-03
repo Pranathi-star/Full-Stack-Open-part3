@@ -1,4 +1,5 @@
 const express = require("express")
+var morgan = require('morgan')
 const app = express()
 
 let persons = [
@@ -39,6 +40,10 @@ let minutes = Math.abs(offset % 60)
 let dayMap = {0: "Sun", 1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri"}
 let monthMap = {"01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr", "05": "May", "06": "Jun", "07": "Jul", "08": "Aug", "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec"}
 
+app.use(express.json())
+
+app.use(morgan('tiny'))
+
 app.get("/info", (req, res) => {
   res.send(
     `<div><p>Phonebook has entries for ${persons.length} people</p><br /><p>${dayMap[day]} ${monthMap[month]} ${date} ${year} ${time} GMT${sign}${hours}${minutes} (${timeZone})</p></div>`
@@ -65,8 +70,6 @@ app.delete('/api/persons/:id', (req, res) => {
   res.status(204).end()
 })
 
-app.use(express.json())
-
 app.post('/api/persons', (req, res) => {
   const person = req.body
   if (person) {
@@ -92,6 +95,12 @@ app.post('/api/persons', (req, res) => {
     res.status(404).end()
   }
 })
+
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: 'unknown endpoint' })
+}
+
+app.use(unknownEndpoint)
 
 const PORT = 3001
 app.listen(PORT, (err, res) => {console.log(`Server running on port ${PORT}`)
