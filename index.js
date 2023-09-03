@@ -42,7 +42,8 @@ let monthMap = {"01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr", "05": "May",
 
 app.use(express.json())
 
-app.use(morgan('tiny'))
+morgan.token('body', function (req, res) { return JSON.stringify(req.body) })
+app.use(morgan(`:method :url :status :res[content-length] - :response-time ms :body`))
 
 app.get("/info", (req, res) => {
   res.send(
