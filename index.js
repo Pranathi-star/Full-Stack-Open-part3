@@ -69,10 +69,28 @@ app.use(express.json())
 
 app.post('/api/persons', (req, res) => {
   const person = req.body
-  console.log(person)
-  person.id = Math.floor(Math.random() * (100000) + 1)
-  persons.concat(person)
-  res.json(person)
+  if (person) {
+    if (person.name && person.number){
+      const present = persons.filter((p) => person.name === p.name)
+      console.log(present, person.name)
+      if (present.length === 0){
+        person.id = Math.floor(Math.random() * (100000) + 1)
+        persons = persons.concat(person)
+        res.json(person) 
+      } else {
+        res.status(400)
+        res.send({ error: 'name must be unique' })
+        res.end()
+      }
+    }
+    else if (!person.name || !person.number){
+      res.status(400)
+      res.send({ error: 'missing data in request body' })
+      res.end()
+    }
+  } else {
+    res.status(404).end()
+  }
 })
 
 const PORT = 3001
