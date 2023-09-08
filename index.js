@@ -1,33 +1,13 @@
 const express = require("express")
 const cors = require("cors")
-var morgan = require('morgan')
+const morgan = require('morgan')
+require("dotenv").config()
+const Person = require('./models/person')
+
 const app = express()
 
 app.use(cors())
 app.use(express.static('build'))
-
-let persons = [
-    { 
-      "id": 1,
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": 2,
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": 3,
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": 4,
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
 
 let dateTime = new Date()
 let year = dateTime.toJSON().slice(0, 4)
@@ -50,55 +30,75 @@ morgan.token('body', function (req, res) { return JSON.stringify(req.body) })
 app.use(morgan(`:method :url :status :res[content-length] - :response-time ms :body`))
 
 app.get("/info", (req, res) => {
-  res.send(
-    `<div><p>Phonebook has entries for ${persons.length} people</p><br /><p>${dayMap[day]} ${monthMap[month]} ${date} ${year} ${time} GMT${sign}${hours}${minutes} (${timeZone})</p></div>`
-  )
+  let persons = []
+  Person.find({}).then(personList => {
+    persons = personList
+    console.log(persons.length)
+    res.send(
+      `<div><p>Phonebook has entries for ${persons.length} people</p><br /><p>${dayMap[day]} ${monthMap[month]} ${date} ${year} ${time} GMT${sign}${hours}${minutes} (${timeZone})</p></div>`
+    )
+  }) 
 })
 
 app.get('/api/persons', (req, res) => {
-  res.json(persons)
-}) 
+  Person.find({}).then(persons => {
+    res.json(persons)
+  }) 
+})
 
 app.get('/api/persons/:id', (req, res) => {
-  const id = Number(req.params.id)
-  const person = persons.find(person => person.id === id)
-  if (person) {
-    res.json(person)
-  } else {
-    res.status(404).end()
-  }
+  const id = req.params.id
+  Person.findById(id).then(person => {
+    if (person) {
+      res.json(person)
+    } else {
+      res.status(404).end()
+    }
+  })
 })
 
 app.delete('/api/persons/:id', (req, res) => {
-  const id = Number(req.params.id)
-  persons = persons.filter(person => person.id !== id)
-  res.status(204).end()
+  const id = req.params.id
+  const persons = []
+  Person.findByIdAndDelete(id).then(personList => {
+    res.status(204).end()
+  }) 
 })
 
 app.post('/api/persons', (req, res) => {
   const person = req.body
-  if (person) {
-    if (person.name && person.number){
-      const present = persons.filter((p) => person.name === p.name)
-      console.log(present, person.name)
-      if (present.length === 0){
-        person.id = Math.floor(Math.random() * (100000) + 1)
-        persons = persons.concat(person)
-        res.json(person) 
-      } else {
+  var newPerson = new Person({
+    name: person.name,
+    number: person.number 
+  })
+  let persons = []
+  Person.find({}).then(personList => {
+    persons = personList
+    if (person) {
+      if (person.name && person.number){
+        const present = persons.filter((p) => person.name === p.name)
+        console.log(present, person.name)
+        if (present.length === 0){
+          newPerson.save().then(savedPerson => {
+            res.json(savedPerson)
+          })
+        } 
+        else {
+          res.status(400)
+          res.send({ error: 'name must be unique' })
+          res.end()
+        }
+      }
+      else if (!person.name || !person.number){
         res.status(400)
-        res.send({ error: 'name must be unique' })
+        res.send({ error: 'missing data in request body' })
         res.end()
       }
     }
-    else if (!person.name || !person.number){
-      res.status(400)
-      res.send({ error: 'missing data in request body' })
-      res.end()
+    else {
+      res.status(404).end()
     }
-  } else {
-    res.status(404).end()
-  }
+  }) 
 })
 
 const unknownEndpoint = (request, response) => {
